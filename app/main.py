@@ -337,9 +337,8 @@ def key_from_authorization_header(authorization: str | None) -> str | None:
     if scheme.lower() != "bearer" or not token.strip():
         return None
     token = token.strip()
-    # BYOP returns a scoped sk_ user key. Secret app-owner keys also start sk_,
-    # but the frontend should only send user-scoped BYOP keys.
-    if not token.startswith("sk_"):
+    # BYOP returns a scoped sk_ user key. Users can also paste pk_ or sk_ keys manually.
+    if not token.startswith(("sk_", "pk_")):
         return None
     return token
 

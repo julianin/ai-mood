@@ -300,6 +300,20 @@
         flex-shrink: 0;
       }
 
+      .keyInputRow {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .keyInputRow input {
+        flex: 1;
+        font-family: monospace;
+        font-size: 13px;
+      }
+      .keyInputRow button {
+        flex-shrink: 0;
+      }
+
       @media (max-width: 768px) {
         header { align-items: flex-start; flex-direction: column; }
         .grid { grid-template-columns: 1fr; }
@@ -337,6 +351,16 @@
               <button class="secondary" id="keyInfoBtn">View key</button>
               <button class="danger" id="disconnectBtn">Disconnect</button>
             </div>
+
+            <div id="manualKeySection">
+              <label for="manualKeyInput">Or paste your Pollinations API key directly</label>
+              <div class="keyInputRow">
+                <input type="password" id="manualKeyInput" placeholder="sk_... or pk_..." autocomplete="off" />
+                <button class="secondary" id="saveKeyBtn">Save key</button>
+              </div>
+              <p class="small" style="margin-top:6px;">Get a free key at <a href="https://enter.pollinations.ai" target="_blank" rel="noreferrer noopener" style="color:var(--accent);">enter.pollinations.ai</a>. Your key stays in your browser and is sent only to this app's server for API calls.</p>
+            </div>
+
             <div id="keyInfo" class="small" style="margin-top:8px;"></div>
             <hr />
 
@@ -495,19 +519,27 @@
         const banner = $('connectBanner');
         const byopEnabled = config?.byop_enabled;
         const serverKey = config?.server_key_available;
+        const manualSection = $('manualKeySection');
+
+        // Show manual key input when no key is set
+        if (userKey) {
+          manualSection.style.display = 'none';
+        } else {
+          manualSection.style.display = 'block';
+        }
 
         if (userKey) {
           banner.className = 'connectBanner connected';
           banner.innerHTML = `✅ <strong>Connected!</strong> Your Pollinations key <code>${maskKey(userKey)}</code> will be used. You spend your own balance.`;
         } else if (byopEnabled) {
           banner.className = 'connectBanner byop-needed';
-          banner.innerHTML = `🐝 <strong>Connect your Pollinations account</strong> to spend your own balance. Click "Connect Pollinations" below.`;
+          banner.innerHTML = `🐝 <strong>Connect your Pollinations account</strong> to spend your own balance, or paste your key below.`;
         } else if (serverKey) {
           banner.className = 'connectBanner byop-needed';
-          banner.innerHTML = `⚠️ BYOP is not configured (missing <code>pk_</code> App Key). The server fallback key will be used. Ask the app owner to set <code>POLLINATIONS_APP_KEY=pk_...</code>.`;
+          banner.innerHTML = `⚠️ BYOP is not configured (missing <code>pk_</code> App Key). The server fallback key will be used. You can also paste your own key below.`;
         } else {
           banner.className = 'connectBanner no-key';
-          banner.innerHTML = `❌ No API key available. Connect your Pollinations account or ask the app owner to configure keys.`;
+          banner.innerHTML = `🔑 <strong>No server key configured.</strong> Paste your Pollinations API key below to get started.`;
         }
 
         // Show/hide connect button based on BYOP availability
@@ -563,7 +595,28 @@
         localStorage.removeItem(KEY_STORAGE);
         localStorage.removeItem(STATE_STORAGE);
         $('keyInfo').textContent = '';
+        $('manualKeyInput').value = '';
         renderConnectBanner();
+      });
+
+      $('saveKeyBtn').addEventListener('click', () => {
+        const key = $('manualKeyInput').value.trim();
+        if (!key) {
+          showError('Please paste your API key (sk_... or pk_...)');
+          return;
+        }
+        if (!key.startsWith('sk_') && !key.startsWith('pk_')) {
+          showError('Key should start with sk_ or pk_. Get one at enter.pollinations.ai');
+          return;
+        }
+        localStorage.setItem(KEY_STORAGE, key);
+        $('manualKeyInput').value = '';
+        renderConnectBanner();
+        addLog('API key saved.', `Key: ${maskKey(key)}`);
+      });
+
+      $('manualKeyInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') $('saveKeyBtn').click();
       });
 
       $('keyInfoBtn').addEventListener('click', async () => {
