@@ -111,18 +111,27 @@ class PollinationsClient:
         """
         return await self.generate_avatar(prompt)
 
-    async def classify_mood(self, text: str) -> str:
-        """Use a cheap LLM call to classify the emotional tone of a message.
+    async def describe_expression(self, text: str) -> dict:
+        """Use an LLM to analyze a user message and describe the facial expression.
 
-        Returns one of the valid mood names. Falls back to 'neutral' on any error.
-        This uses the OpenAI-compatible chat completions endpoint with a minimal prompt.
+        Returns a dict with:
+          - mood: one of the valid mood names (for UI categorization)
+          - expression: a detailed description of the facial expression (for image editing)
+
+        Falls back to keyword classification on any error.
         """
-        import json
+        from .mood import MOODS, MoodName, classify_mood
 
-        valid_moods = "happy, sad, angry, anxious, surprised, calm, confused, tired, excited, neutral"
+        valid_moods = ", ".join(MOODS.keys())
         system_msg = (
-            f"You are an emotion classifier. Given a user message, respond with exactly one word "
-            f"from this list: {valid_moods}. No explanation, no punctuation, just the mood word."
+            "You are an emotion-to-expression translator. "
+            "Given a user message, you must respond with a JSON object with exactly two fields:\n"
+            f'- "mood": one of [{valid_moods}]\n'
+            '- "expression": a vivid 15-25 word description of the facial expression this person would show, '
+            "focusing on eyes, eyebrows, mouth, and micro-expressions.\n\n"
+            'Example input: "I just got promoted!"\n'
+            'Example output: {"mood": "excited", "expression": "wide beaming smile, eyes sparkling with joy, eyebrows raised high, cheeks pushed up, radiant thrilled face"}\n\n'
+            "Respond with ONLY the JSON object, no other text."
         )
         payload = {
             "model": os.getenv("POLLINATIONS_MOOD_MODEL", "openai"),
@@ -130,8 +139,8 @@ class PollinationsClient:
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": text},
             ],
-            "max_tokens": 10,
-            "temperature": 0.1,
+            "max_tokens": 100,
+            "temperature": 0.3,
         }
         try:
             async with httpx.AsyncClient(timeout=15) as client:
@@ -141,14 +150,23 @@ class PollinationsClient:
                     json=payload,
                 )
                 data = self._json_or_raise(res)
-                content = data["choices"][0]["message"]["content"].strip().lower()
-                # Extract just the mood word
-                for word in content.split():
-                    if word in {"happy", "sad", "angry", "anxious", "surprised", "calm", "confused", "tired", "excited", "neutral"}:
-                        return word
-                return "neutral"
+                content = data["choices"][0]["message"]["content"].strip()
+                # Parse JSON from the response
+                import json
+                # Handle markdown code blocks
+                if content.startswith("```"):
+                    content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+                result = json.loads(content)
+                # Validate mood
+                if result.get("mood") not in MOODS:
+                    result["mood"] = "neutral"
+                # Validate expression exists
+                if not result.get("expression") or not isinstance(result["expression"], str):
+                    result["expression"] = MOODS[result["mood"]].expression_prompt
+                return result
         except Exception:
-            return "neutral"
+            fallback = classify_mood(text)
+            return {"mood": fallback.name, "expression": fallback.expression_prompt}
 
     async def _image_bytes_from_response(self, data: dict[str, Any], client: httpx.AsyncClient) -> bytes:
         try:

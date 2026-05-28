@@ -266,18 +266,20 @@ async def message(req: MessageRequest, authorization: str | None = Header(defaul
     if not session:
         raise HTTPException(status_code=404, detail="Unknown session_id. Start a new session first.")
 
-    # Classify mood: LLM via user key or server key, keyword fallback
-    if req.force_mood:
-        mood = MOODS.get(req.force_mood)
-        if mood is None:
-            mood = classify_mood(req.text)
+    # Determine mood and expression description
+    if req.force_mood and MOODS.get(req.force_mood):
+        mood = MOODS[req.force_mood]
+        expression_description = mood.expression_prompt
     else:
+        # Use LLM to get a rich expression description from the user's message
         try:
             client_for_mood, _ = make_client(authorization)
-            llm_mood_name = await client_for_mood.classify_mood(req.text)
-            mood = MOODS.get(llm_mood_name) or classify_mood(req.text)
+            llm_result = await client_for_mood.describe_expression(req.text)
+            mood = MOODS.get(llm_result.get("mood"), MOODS["neutral"])
+            expression_description = llm_result.get("expression", mood.expression_prompt)
         except (HTTPException, PollinationsError):
             mood = classify_mood(req.text)
+            expression_description = mood.expression_prompt
 
     session["turn"] += 1
     session["messages"].append({"role": "user", "content": req.text, "mood": mood.name})
@@ -289,7 +291,7 @@ async def message(req: MessageRequest, authorization: str | None = Header(defaul
         source_path = Path(session["base_path"])
         edited_from = "base"
 
-    edit_prompt = build_edit_prompt(session["identity_prompt"], mood.expression_prompt)
+    edit_prompt = build_edit_prompt(session["identity_prompt"], expression_description)
     out_path = DATA_DIR / req.session_id / f"turn_{session['turn']:03d}_{mood.name}.png"
 
     try:
@@ -297,8 +299,7 @@ async def message(req: MessageRequest, authorization: str | None = Header(defaul
         try:
             image_bytes = await client.edit_avatar(source_path, edit_prompt)
         except PollinationsError:
-            # Some upstream edit models can be flaky. Keep the demo alive.
-            fallback_prompt = build_fallback_generation_prompt(session["identity_prompt"], mood.expression_prompt)
+            fallback_prompt = build_fallback_generation_prompt(session["identity_prompt"], expression_description)
             image_bytes = await client.fallback_variation(fallback_prompt)
             edited_from = "fallback_generation"
             edit_prompt = fallback_prompt
