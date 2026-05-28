@@ -3,7 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AI Mood</title>
+    <title>AI Mood — Emotional Avatar</title>
+    <meta name="description" content="Create an AI avatar that reacts to your emotions. Powered by pollinations.ai with Bring Your Own Pollen." />
+    <meta property="og:title" content="AI Mood — Emotional Avatar" />
+    <meta property="og:description" content="Create an AI avatar that reacts to your emotions. Powered by pollinations.ai." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🙂</text></svg>" />
     <style>
       :root {
         --bg: #09090f;
@@ -16,9 +22,8 @@
         --danger: #ff6b8a;
         --ok: #74f0a7;
       }
-      * { box-sizing: border-box; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
       body {
-        margin: 0;
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         color: var(--text);
         background:
@@ -39,8 +44,8 @@
         gap: 20px;
         margin-bottom: 24px;
       }
-      h1 { font-size: clamp(32px, 5vw, 64px); margin: 0; letter-spacing: -0.06em; }
-      .tag { color: var(--muted); max-width: 620px; line-height: 1.55; }
+      h1 { font-size: clamp(32px, 5vw, 64px); letter-spacing: -0.06em; }
+      .tag { color: var(--muted); max-width: 620px; line-height: 1.55; margin-top: 8px; }
       .pill {
         display: inline-flex;
         align-items: center;
@@ -51,6 +56,7 @@
         padding: 10px 14px;
         color: var(--muted);
         white-space: nowrap;
+        font-size: 14px;
       }
       .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
       .card {
@@ -61,7 +67,7 @@
         overflow: hidden;
         backdrop-filter: blur(18px);
       }
-      .card h2 { margin: 0 0 14px; letter-spacing: -0.03em; }
+      .card h2 { margin: 0 0 14px; letter-spacing: -0.03em; font-size: 20px; }
       .pad { padding: 22px; }
       label { display: block; color: var(--muted); margin-bottom: 8px; font-size: 14px; }
       textarea, input, select {
@@ -73,8 +79,9 @@
         padding: 14px 15px;
         outline: none;
         font: inherit;
+        font-size: 14px;
       }
-      textarea { min-height: 96px; resize: vertical; }
+      textarea { min-height: 80px; resize: vertical; }
       input:focus, textarea:focus, select:focus { border-color: rgba(199,255,94,.72); }
       .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
       .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 12px 0; }
@@ -85,6 +92,7 @@
         border-radius: 18px;
         padding: 14px 18px;
         font-weight: 800;
+        font-size: 14px;
         cursor: pointer;
         transition: transform .12s ease, opacity .12s ease;
       }
@@ -118,6 +126,7 @@
         color: var(--muted);
         text-align: center;
         padding: 32px;
+        line-height: 1.6;
       }
       .mood {
         position: absolute;
@@ -131,6 +140,7 @@
         border-radius: 999px;
         padding: 10px 14px;
         backdrop-filter: blur(14px);
+        font-size: 15px;
       }
       .log {
         max-height: 220px;
@@ -146,12 +156,13 @@
         border-radius: 18px;
         padding: 12px;
         color: #e8e8f0;
+        font-size: 14px;
       }
       .small { font-size: 13px; color: var(--muted); line-height: 1.5; }
       .ok { color: var(--ok); }
       .error { color: var(--danger); white-space: pre-wrap; }
-      code { background: rgba(255,255,255,.09); border-radius: 8px; padding: 2px 6px; }
-      pre { white-space: pre-wrap; overflow: auto; max-height: 260px; }
+      code { background: rgba(255,255,255,.09); border-radius: 8px; padding: 2px 6px; font-size: 13px; }
+      pre { white-space: pre-wrap; overflow: auto; max-height: 260px; font-size: 12px; }
       hr { border:0; border-top:1px solid var(--line); margin:22px 0; }
 
       .brandBlock {
@@ -192,7 +203,7 @@
         gap: 10px 14px;
         margin-top: 8px;
       }
-      .footerLinks a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+      .footerLinks a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; font-size: 13px; }
 
       .dropZone {
         display: flex;
@@ -251,10 +262,50 @@
         flex: 1;
         border-top: 1px solid var(--line);
       }
+
+      .connectBanner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        border-radius: 18px;
+        margin-bottom: 18px;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .connectBanner.byop-needed {
+        background: rgba(199,255,94,.08);
+        border: 1px solid rgba(199,255,94,.24);
+      }
+      .connectBanner.connected {
+        background: rgba(116,240,167,.08);
+        border: 1px solid rgba(116,240,167,.24);
+      }
+      .connectBanner.no-key {
+        background: rgba(255,107,138,.08);
+        border: 1px solid rgba(255,107,138,.24);
+      }
+
+      .stepNumber {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #111;
+        font-weight: 800;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+
+      @media (max-width: 768px) {
         header { align-items: flex-start; flex-direction: column; }
         .grid { grid-template-columns: 1fr; }
         .avatarBox { min-height: auto; padding: 16px; }
         .row, .row3 { grid-template-columns: 1fr; }
+        .brandBlock { flex-direction: column; align-items: flex-start; }
       }
     </style>
   </head>
@@ -263,7 +314,7 @@
       <header>
         <div>
           <h1>AI Mood</h1>
-          <p class="tag">An emotional avatar app powered by Pollinations.ai: it generates one base image, then edits that same image with the detected facial expression. It supports Bring Your Own Pollen so each user can spend their own balance.</p>
+          <p class="tag">Create an emotional avatar that reacts to your messages. Each message changes the facial expression while keeping the same character. Connect your Pollinations account and spend your own balance.</p>
         </div>
         <div class="pill"><span>⚡</span><span id="status">Ready</span></div>
       </header>
@@ -272,34 +323,32 @@
         <section class="card">
           <div class="avatarBox">
             <div class="mood"><span id="moodEmoji">🙂</span><strong id="moodLabel">Neutral</strong></div>
-            <div id="placeholder" class="placeholder">Connect Pollinations or use the server-side fallback key first.<br/>Then create the base avatar.</div>
+            <div id="placeholder" class="placeholder">Create your avatar to get started.<br/>Connect Pollinations below, then generate your base image.</div>
             <img id="avatar" alt="AI Mood avatar" style="display:none" />
           </div>
         </section>
 
         <section class="card">
           <div class="pad">
-            <h2>0. Pollinations / BYOP</h2>
-            <p class="small" id="authHelp">Loading configuration...</p>
-            <div class="row3">
+            <div id="connectBanner" class="connectBanner byop-needed"></div>
+
+            <div class="row3" id="authButtons">
               <button id="connectBtn">Connect Pollinations</button>
               <button class="secondary" id="keyInfoBtn">View key</button>
               <button class="danger" id="disconnectBtn">Disconnect</button>
             </div>
-            <div id="authState" class="small"></div>
-            <div id="keyInfo" class="small"></div>
+            <div id="keyInfo" class="small" style="margin-top:8px;"></div>
             <hr />
 
-            <h2>1. Create base avatar</h2>
+            <h2><span class="stepNumber">1</span> Create base avatar</h2>
             <label for="persona">Persona</label>
             <textarea id="persona">a friendly gender-neutral AI companion, young adult, expressive face, short dark hair, warm eyes, minimal black hoodie</textarea>
-            <label for="style">Style</label>
+            <label for="style" style="margin-top:12px;">Style</label>
             <textarea id="style">cinematic 3D portrait, soft studio lighting, clean pastel background, polished app avatar, high quality</textarea>
             <div class="row">
               <button id="startBtn">Generate base image</button>
               <button class="secondary" id="accountBtn">View account</button>
             </div>
-            <p class="small">When BYOP is connected, FastAPI uses the user's temporary key. Otherwise, it uses <code>POLLINATIONS_API_KEY</code> as a development fallback.</p>
             <div id="account" class="small"></div>
 
             <div class="orDivider">— or upload your own —</div>
@@ -320,10 +369,10 @@
             <div id="uploadError" class="error" style="margin-top:8px;"></div>
             <hr />
 
-            <h2>2. Chat / change mood</h2>
+            <h2><span class="stepNumber">2</span> Chat / change mood</h2>
             <label for="message">User message</label>
-            <textarea id="message" placeholder="Example: I am nervous. I have a demo tomorrow and I am not sure it will go well..."></textarea>
-            <label for="forceMood">Optional forced mood</label>
+            <textarea id="message" placeholder="Example: I am nervous about tomorrow's demo..."></textarea>
+            <label for="forceMood" style="margin-top:12px;">Optional forced mood</label>
             <select id="forceMood">
               <option value="">Auto-detect</option>
               <option value="happy">😊 Happy</option>
@@ -438,7 +487,32 @@
       async function loadConfig() {
         const res = await fetch('/api/config');
         config = await res.json();
-        renderAuthState();
+        renderConnectBanner();
+      }
+
+      function renderConnectBanner() {
+        const userKey = getUserKey();
+        const banner = $('connectBanner');
+        const byopEnabled = config?.byop_enabled;
+        const serverKey = config?.server_key_available;
+
+        if (userKey) {
+          banner.className = 'connectBanner connected';
+          banner.innerHTML = `✅ <strong>Connected!</strong> Your Pollinations key <code>${maskKey(userKey)}</code> will be used. You spend your own balance.`;
+        } else if (byopEnabled) {
+          banner.className = 'connectBanner byop-needed';
+          banner.innerHTML = `🐝 <strong>Connect your Pollinations account</strong> to spend your own balance. Click "Connect Pollinations" below.`;
+        } else if (serverKey) {
+          banner.className = 'connectBanner byop-needed';
+          banner.innerHTML = `⚠️ BYOP is not configured (missing <code>pk_</code> App Key). The server fallback key will be used. Ask the app owner to set <code>POLLINATIONS_APP_KEY=pk_...</code>.`;
+        } else {
+          banner.className = 'connectBanner no-key';
+          banner.innerHTML = `❌ No API key available. Connect your Pollinations account or ask the app owner to configure keys.`;
+        }
+
+        // Show/hide connect button based on BYOP availability
+        $('connectBtn').style.display = byopEnabled ? '' : 'none';
+        setBusy(false);
       }
 
       function handleAuthCallback() {
@@ -463,33 +537,9 @@
         history.replaceState(null, '', location.pathname + location.search);
       }
 
-      function renderAuthState() {
-        const userKey = getUserKey();
-        const parts = [];
-        if (config?.byop_enabled) {
-          parts.push(`BYOP App Key enabled: ${maskKey(config.client_id)}`);
-          parts.push(`models: ${config.models.join(', ')}`);
-          parts.push(`budget: ${config.budget || 'default'} pollen`);
-          parts.push(`expiry: ${config.expiry_days || 'default'} days`);
-        } else {
-          parts.push('BYOP is not configured: missing POLLINATIONS_APP_KEY=pk_...');
-        }
-        parts.push(config?.server_key_available ? 'server fallback: available' : 'server fallback: none');
-        $('authHelp').textContent = parts.join(' · ');
-
-        if (userKey) {
-          $('authState').innerHTML = `<span class="ok">BYOP connected.</span> The user key will be used: <code>${maskKey(userKey)}</code>`;
-        } else if (config?.server_key_available) {
-          $('authState').innerHTML = `BYOP is not connected. The server-side key will be used as a development fallback.`;
-        } else {
-          $('authState').innerHTML = `Connect Pollinations to generate images.`;
-        }
-        setBusy(false);
-      }
-
       function connectPollinations() {
         if (!config?.byop_enabled || !config.client_id) {
-          showError('Missing POLLINATIONS_APP_KEY=pk_... on the server. Create an App Key at enter.pollinations.ai and add it to your .env file.');
+          showError('Missing Pollinations App Key (pk_...) on the server. Create one at enter.pollinations.ai and add it as POLLINATIONS_APP_KEY.');
           return;
         }
         const state = crypto.getRandomValues(new Uint32Array(4)).join('-');
@@ -513,7 +563,7 @@
         localStorage.removeItem(KEY_STORAGE);
         localStorage.removeItem(STATE_STORAGE);
         $('keyInfo').textContent = '';
-        renderAuthState();
+        renderConnectBanner();
       });
 
       $('keyInfoBtn').addEventListener('click', async () => {
@@ -594,7 +644,6 @@
         dropZone.classList.remove('drag-over');
         const file = e.dataTransfer.files[0];
         if (!file) return;
-        // Transfer to the real input so uploadBtn logic works
         const dt = new DataTransfer();
         dt.items.add(file);
         $('uploadFile').files = dt.files;
@@ -637,14 +686,13 @@
           const data = await apiGet('/api/account');
           $('account').innerHTML = `<pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
         } catch (err) {
-          $('account').textContent = err.message + ' — try “View key”, which requires fewer permissions.';
+          $('account').textContent = err.message + ' — try "View key", which requires fewer permissions.';
         }
       });
 
       (async function init() {
         handleAuthCallback();
         await loadConfig();
-        renderAuthState();
       })().catch(err => showError(err.message));
     </script>
   </body>

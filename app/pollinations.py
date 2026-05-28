@@ -15,10 +15,7 @@ class PollinationsError(RuntimeError):
 
 class PollinationsClient:
     def __init__(self, api_key: str | None = None) -> None:
-        # `api_key` can be:
-        # - the app owner's server-side sk_ key from POLLINATIONS_API_KEY
-        # - a BYOP scoped user sk_ key returned by enter.pollinations.ai/authorize
-        self.api_key = (api_key or os.getenv("POLLINATIONS_API_KEY", "")).strip()
+        self.api_key = (api_key or "").strip()
         self.base_url = os.getenv("POLLINATIONS_BASE_URL", "https://gen.pollinations.ai").rstrip("/")
         self.generate_model = os.getenv("POLLINATIONS_GENERATE_MODEL", "flux")
         self.edit_model = os.getenv("POLLINATIONS_EDIT_MODEL", "gptimage")

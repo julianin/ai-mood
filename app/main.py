@@ -27,6 +27,7 @@ if REFERENCE_MODE not in {"base", "current"}:
     REFERENCE_MODE = "base"
 
 POLLINATIONS_APP_KEY = os.getenv("POLLINATIONS_APP_KEY", "").strip()
+POLLINATIONS_API_KEY = os.getenv("POLLINATIONS_API_KEY", "").strip()
 POLLINATIONS_AUTH_BASE_URL = os.getenv(
     "POLLINATIONS_AUTH_BASE_URL", "https://enter.pollinations.ai"
 ).rstrip("/")
@@ -34,7 +35,11 @@ BYOP_BUDGET = os.getenv("BYOP_BUDGET", "5").strip()
 BYOP_EXPIRY_DAYS = os.getenv("BYOP_EXPIRY_DAYS", "7").strip()
 BYOP_SCOPE = os.getenv("BYOP_SCOPE", "usage").strip()
 BYOP_REDIRECT_PATH = os.getenv("BYOP_REDIRECT_PATH", "/auth/callback").strip() or "/auth/callback"
-SERVER_KEY_AVAILABLE = bool(os.getenv("POLLINATIONS_API_KEY", "").strip())
+
+# Only expose publishable pk_ keys to the frontend. Never leak sk_ keys.
+BYOP_CLIENT_ID = POLLINATIONS_APP_KEY if POLLINATIONS_APP_KEY.startswith("pk_") else None
+BYOP_ENABLED = BYOP_CLIENT_ID is not None
+SERVER_KEY_AVAILABLE = bool(POLLINATIONS_API_KEY)
 
 app = FastAPI(title="AI Mood", version="0.2.0")
 app.add_middleware(
@@ -105,7 +110,7 @@ async def health() -> dict:
     return {
         "ok": True,
         "reference_mode": REFERENCE_MODE,
-        "byop_enabled": bool(POLLINATIONS_APP_KEY),
+        "byop_enabled": BYOP_ENABLED,
         "server_key_available": SERVER_KEY_AVAILABLE,
     }
 
@@ -117,8 +122,8 @@ async def config() -> dict:
     models = sorted({generate_model, edit_model})
     return {
         "app_name": "AI Mood",
-        "byop_enabled": bool(POLLINATIONS_APP_KEY),
-        "client_id": POLLINATIONS_APP_KEY or None,  # publishable pk_, safe to expose
+        "byop_enabled": BYOP_ENABLED,
+        "client_id": BYOP_CLIENT_ID,
         "auth_base_url": POLLINATIONS_AUTH_BASE_URL,
         "redirect_path": BYOP_REDIRECT_PATH,
         "scope": BYOP_SCOPE,
@@ -317,7 +322,12 @@ def make_client(authorization: str | None) -> tuple[PollinationsClient, Literal[
     user_key = key_from_authorization_header(authorization)
     if user_key:
         return PollinationsClient(api_key=user_key), "byop"
-    return PollinationsClient(), "server"
+    if not POLLINATIONS_API_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="No API key available. Connect with Bring Your Own Pollen, or ask the app owner to set POLLINATIONS_API_KEY.",
+        )
+    return PollinationsClient(api_key=POLLINATIONS_API_KEY), "server"
 
 
 def key_from_authorization_header(authorization: str | None) -> str | None:
