@@ -18,7 +18,7 @@ class PollinationsClient:
         self.api_key = (api_key or "").strip()
         self.base_url = os.getenv("POLLINATIONS_BASE_URL", "https://gen.pollinations.ai").rstrip("/")
         self.generate_model = os.getenv("POLLINATIONS_GENERATE_MODEL", "flux")
-        self.edit_model = os.getenv("POLLINATIONS_EDIT_MODEL", "gptimage")
+        self.edit_model = os.getenv("POLLINATIONS_EDIT_MODEL", "kontext")
         self.size = os.getenv("IMAGE_SIZE", "768x768")
         self.quality = os.getenv("IMAGE_QUALITY", "medium")
 
@@ -68,12 +68,40 @@ class PollinationsClient:
             return await self._image_bytes_from_response(data, client)
 
     async def edit_avatar(self, source_image: Path, prompt: str) -> bytes:
-        """Edit an existing avatar.
+        """Edit an existing avatar using image+text generation.
 
-        Pollinations documents POST /v1/images/edits as OpenAI-compatible and says it
-        accepts multipart/form-data with file uploads. Some providers expect the file
-        field to be named `image`, others `image[]`, so we try both.
+        Tries /v1/images/generations with the source image as input (modern approach
+        for models like kontext, gptimage, klein that accept text+image).
+        Falls back to /v1/images/edits if that doesn't work.
         """
+        import base64
+
+        image_b64 = base64.b64encode(source_image.read_bytes()).decode()
+
+        # Approach 1: /v1/images/generations with image input (modern, works with kontext/gptimage)
+        payload = {
+            "model": self.edit_model,
+            "prompt": prompt,
+            "n": 1,
+            "size": self.size,
+            "quality": self.quality,
+            "response_format": "b64_json",
+            "safe": "true",
+            "image": image_b64,
+        }
+        async with httpx.AsyncClient(timeout=240) as client:
+            res = await client.post(
+                f"{self.base_url}/v1/images/generations",
+                headers={**self.headers, "Content-Type": "application/json"},
+                json=payload,
+            )
+            if res.is_success:
+                data = res.json()
+                return await self._image_bytes_from_response(data, client)
+
+            gen_error = f"generations+image: {res.status_code}: {res.text[:500]}"
+
+        # Approach 2: /v1/images/edits with multipart (OpenAI-compatible)
         mime = mimetypes.guess_type(source_image.name)[0] or "image/png"
         data = {
             "model": self.edit_model,
@@ -97,11 +125,13 @@ class PollinationsClient:
                         files=files,
                     )
                 if res.is_success:
-                    payload = res.json()
-                    return await self._image_bytes_from_response(payload, client)
-                last_error = f"{res.status_code}: {res.text[:800]}"
+                    payload_resp = res.json()
+                    return await self._image_bytes_from_response(payload_resp, client)
+                last_error = f"edits({field_name}): {res.status_code}: {res.text[:500]}"
 
-        raise PollinationsError(f"Image edit failed. Last response: {last_error}")
+        raise PollinationsError(
+            f"Image edit failed. Tried: 1) {gen_error} 2) {last_error}"
+        )
 
     async def fallback_variation(self, prompt: str) -> bytes:
         """Fallback if /edits has an upstream model issue.
