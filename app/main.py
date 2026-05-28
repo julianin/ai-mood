@@ -133,6 +133,7 @@ async def config() -> dict:
         "server_key_available": SERVER_KEY_AVAILABLE,
         "reference_mode": REFERENCE_MODE,
         "image_size": os.getenv("IMAGE_SIZE", "768x768"),
+        "mood_model": os.getenv("POLLINATIONS_MOOD_MODEL", "openai"),
     }
 
 
@@ -265,9 +266,18 @@ async def message(req: MessageRequest, authorization: str | None = Header(defaul
     if not session:
         raise HTTPException(status_code=404, detail="Unknown session_id. Start a new session first.")
 
-    mood = MOODS.get(req.force_mood) if req.force_mood else classify_mood(req.text)
-    if mood is None:
-        mood = classify_mood(req.text)
+    # Classify mood: LLM via user key or server key, keyword fallback
+    if req.force_mood:
+        mood = MOODS.get(req.force_mood)
+        if mood is None:
+            mood = classify_mood(req.text)
+    else:
+        try:
+            client_for_mood, _ = make_client(authorization)
+            llm_mood_name = await client_for_mood.classify_mood(req.text)
+            mood = MOODS.get(llm_mood_name) or classify_mood(req.text)
+        except (HTTPException, PollinationsError):
+            mood = classify_mood(req.text)
 
     session["turn"] += 1
     session["messages"].append({"role": "user", "content": req.text, "mood": mood.name})

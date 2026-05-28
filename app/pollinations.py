@@ -111,6 +111,45 @@ class PollinationsClient:
         """
         return await self.generate_avatar(prompt)
 
+    async def classify_mood(self, text: str) -> str:
+        """Use a cheap LLM call to classify the emotional tone of a message.
+
+        Returns one of the valid mood names. Falls back to 'neutral' on any error.
+        This uses the OpenAI-compatible chat completions endpoint with a minimal prompt.
+        """
+        import json
+
+        valid_moods = "happy, sad, angry, anxious, surprised, calm, confused, tired, excited, neutral"
+        system_msg = (
+            f"You are an emotion classifier. Given a user message, respond with exactly one word "
+            f"from this list: {valid_moods}. No explanation, no punctuation, just the mood word."
+        )
+        payload = {
+            "model": os.getenv("POLLINATIONS_MOOD_MODEL", "openai"),
+            "messages": [
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": text},
+            ],
+            "max_tokens": 10,
+            "temperature": 0.1,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                res = await client.post(
+                    f"{self.base_url}/v1/chat/completions",
+                    headers={**self.headers, "Content-Type": "application/json"},
+                    json=payload,
+                )
+                data = self._json_or_raise(res)
+                content = data["choices"][0]["message"]["content"].strip().lower()
+                # Extract just the mood word
+                for word in content.split():
+                    if word in {"happy", "sad", "angry", "anxious", "surprised", "calm", "confused", "tired", "excited", "neutral"}:
+                        return word
+                return "neutral"
+        except Exception:
+            return "neutral"
+
     async def _image_bytes_from_response(self, data: dict[str, Any], client: httpx.AsyncClient) -> bytes:
         try:
             item = data["data"][0]
