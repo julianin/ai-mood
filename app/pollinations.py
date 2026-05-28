@@ -151,7 +151,10 @@ class PollinationsClient:
         Falls back to keyword classification on any error.
         """
         from .mood import MOODS, MoodName, classify_mood
+        import json
+        import logging
 
+        logger = logging.getLogger("ai-mood")
         valid_moods = ", ".join(MOODS.keys())
         system_msg = (
             "You analyze emotions in any language and translate them into facial expression descriptions. "
@@ -165,40 +168,55 @@ class PollinationsClient:
             'Example: "What a beautiful day, I feel so peaceful" → {"mood": "calm", "expression": "soft gentle smile, relaxed closed eyes, smooth forehead, serene peaceful face, calm breathing"}\n\n'
             "Respond with ONLY the JSON object, no other text."
         )
-        payload = {
-            "model": os.getenv("POLLINATIONS_MOOD_MODEL", "openai"),
-            "messages": [
-                {"role": "system", "content": system_msg},
-                {"role": "user", "content": text},
-            ],
-            "max_tokens": 100,
-            "temperature": 0.3,
-        }
-        try:
-            async with httpx.AsyncClient(timeout=15) as client:
-                res = await client.post(
-                    f"{self.base_url}/v1/chat/completions",
-                    headers={**self.headers, "Content-Type": "application/json"},
-                    json=payload,
-                )
-                data = self._json_or_raise(res)
-                content = data["choices"][0]["message"]["content"].strip()
-                # Parse JSON from the response
-                import json
-                # Handle markdown code blocks
-                if content.startswith("```"):
-                    content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-                result = json.loads(content)
-                # Validate mood
-                if result.get("mood") not in MOODS:
-                    result["mood"] = "neutral"
-                # Validate expression exists
-                if not result.get("expression") or not isinstance(result["expression"], str):
-                    result["expression"] = MOODS[result["mood"]].expression_prompt
-                return result
-        except Exception:
-            fallback = classify_mood(text)
-            return {"mood": fallback.name, "expression": fallback.expression_prompt}
+
+        # Try multiple models in case one isn't available for the key
+        models_to_try = [
+            os.getenv("POLLINATIONS_MOOD_MODEL", "openai"),
+            "openai-fast",
+            "mistral",
+            "gemini-flash-lite-3.1",
+        ]
+        # Deduplicate while preserving order
+        seen = set()
+        models_to_try = [m for m in models_to_try if not (m in seen or seen.add(m))]
+
+        for model in models_to_try:
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_msg},
+                    {"role": "user", "content": text},
+                ],
+                "max_tokens": 100,
+                "temperature": 0.3,
+            }
+            try:
+                async with httpx.AsyncClient(timeout=15) as client:
+                    res = await client.post(
+                        f"{self.base_url}/v1/chat/completions",
+                        headers={**self.headers, "Content-Type": "application/json"},
+                        json=payload,
+                    )
+                    if not res.is_success:
+                        logger.warning("Mood LLM model %s failed: %s %s", model, res.status_code, res.text[:200])
+                        continue
+                    data = res.json()
+                    content = data["choices"][0]["message"]["content"].strip()
+                    if content.startswith("```"):
+                        content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+                    result = json.loads(content)
+                    if result.get("mood") not in MOODS:
+                        result["mood"] = "neutral"
+                    if not result.get("expression") or not isinstance(result["expression"], str):
+                        result["expression"] = MOODS[result["mood"]].expression_prompt
+                    return result
+            except Exception as exc:
+                logger.warning("Mood LLM model %s error: %s", model, exc)
+                continue
+
+        # All LLM models failed, use keyword fallback
+        fallback = classify_mood(text)
+        return {"mood": fallback.name, "expression": fallback.expression_prompt}
 
     async def _image_bytes_from_response(self, data: dict[str, Any], client: httpx.AsyncClient) -> bytes:
         try:

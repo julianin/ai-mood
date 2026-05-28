@@ -266,18 +266,23 @@ async def message(req: MessageRequest, authorization: str | None = Header(defaul
     if not session:
         raise HTTPException(status_code=404, detail="Unknown session_id. Start a new session first.")
 
-    # Determine mood and expression description
-    if req.force_mood and MOODS.get(req.force_mood):
-        mood = MOODS[req.force_mood]
-        expression_description = mood.expression_prompt
-    else:
-        # Use LLM to get a rich expression description from the user's message
-        try:
-            client_for_mood, _ = make_client(authorization)
-            llm_result = await client_for_mood.describe_expression(req.text)
+    mood = MOODS.get(req.force_mood) if req.force_mood else None
+    if mood is None:
+        # Use LLM to get a rich expression description from the user's message.
+        # Try server key first (has access to all models), then user's BYOP key.
+        llm_result = None
+        for key in [POLLINATIONS_API_KEY, key_from_authorization_header(authorization)]:
+            if key:
+                try:
+                    mood_client = PollinationsClient(api_key=key)
+                    llm_result = await mood_client.describe_expression(req.text)
+                    break
+                except Exception:
+                    continue
+        if llm_result:
             mood = MOODS.get(llm_result.get("mood"), MOODS["neutral"])
             expression_description = llm_result.get("expression", mood.expression_prompt)
-        except (HTTPException, PollinationsError):
+        else:
             mood = classify_mood(req.text)
             expression_description = mood.expression_prompt
 
