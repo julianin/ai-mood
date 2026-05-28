@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Mood</title>
+    <style>
+      :root {
+        --bg: #09090f;
+        --panel: rgba(255,255,255,.07);
+        --panel2: rgba(255,255,255,.1);
+        --text: #f7f7fb;
+        --muted: #a4a6b5;
+        --line: rgba(255,255,255,.12);
+        --accent: #c7ff5e;
+        --danger: #ff6b8a;
+        --ok: #74f0a7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 20% 20%, rgba(199,255,94,.18), transparent 28rem),
+          radial-gradient(circle at 80% 10%, rgba(111,88,255,.22), transparent 24rem),
+          linear-gradient(135deg, #09090f 0%, #141323 100%);
+        min-height: 100vh;
+      }
+      .wrap {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 24px;
+      }
+      h1 { font-size: clamp(32px, 5vw, 64px); margin: 0; letter-spacing: -0.06em; }
+      .tag { color: var(--muted); max-width: 620px; line-height: 1.55; }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,.06);
+        border-radius: 999px;
+        padding: 10px 14px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+      .card {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 28px;
+        box-shadow: 0 24px 80px rgba(0,0,0,.28);
+        overflow: hidden;
+        backdrop-filter: blur(18px);
+      }
+      .card h2 { margin: 0 0 14px; letter-spacing: -0.03em; }
+      .pad { padding: 22px; }
+      label { display: block; color: var(--muted); margin-bottom: 8px; font-size: 14px; }
+      textarea, input, select {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: rgba(0,0,0,.22);
+        color: var(--text);
+        border-radius: 18px;
+        padding: 14px 15px;
+        outline: none;
+        font: inherit;
+      }
+      textarea { min-height: 96px; resize: vertical; }
+      input:focus, textarea:focus, select:focus { border-color: rgba(199,255,94,.72); }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+      .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 12px 0; }
+      button {
+        border: 0;
+        background: var(--accent);
+        color: #111;
+        border-radius: 18px;
+        padding: 14px 18px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform .12s ease, opacity .12s ease;
+      }
+      button:hover { transform: translateY(-1px); }
+      button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+      .secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
+      .danger { background: rgba(255,107,138,.14); color: #ffd8e1; border: 1px solid rgba(255,107,138,.34); }
+      .avatarBox {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 540px;
+        background: radial-gradient(circle at center, rgba(255,255,255,.08), transparent 28rem);
+      }
+      #avatar {
+        width: min(100%, 520px);
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        display: block;
+        border-radius: 32px;
+        border: 1px solid var(--line);
+        background: rgba(0,0,0,.2);
+      }
+      .placeholder {
+        width: min(100%, 520px);
+        aspect-ratio: 1 / 1;
+        display: grid;
+        place-items: center;
+        border: 1px dashed rgba(255,255,255,.22);
+        border-radius: 32px;
+        color: var(--muted);
+        text-align: center;
+        padding: 32px;
+      }
+      .mood {
+        position: absolute;
+        top: 18px;
+        left: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(0,0,0,.45);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 10px 14px;
+        backdrop-filter: blur(14px);
+      }
+      .log {
+        max-height: 220px;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .msg {
+        border: 1px solid var(--line);
+        background: rgba(0,0,0,.18);
+        border-radius: 18px;
+        padding: 12px;
+        color: #e8e8f0;
+      }
+      .small { font-size: 13px; color: var(--muted); line-height: 1.5; }
+      .ok { color: var(--ok); }
+      .error { color: var(--danger); white-space: pre-wrap; }
+      code { background: rgba(255,255,255,.09); border-radius: 8px; padding: 2px 6px; }
+      pre { white-space: pre-wrap; overflow: auto; max-height: 260px; }
+      hr { border:0; border-top:1px solid var(--line); margin:22px 0; }
+
+      .brandBlock {
+        margin-top: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        background: rgba(0,0,0,.22);
+        border-radius: 22px;
+      }
+      .brandBlock a { color: var(--text); text-decoration: none; }
+      .brandCopy { display: flex; flex-direction: column; gap: 6px; }
+      .pollinationsLogo {
+        height: 26px;
+        max-width: 220px;
+        object-fit: contain;
+      }
+      .polliBadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        width: fit-content;
+        border: 1px solid rgba(199,255,94,.36);
+        background: linear-gradient(135deg, rgba(138,43,226,.42), rgba(199,255,94,.14));
+        color: var(--text);
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: .01em;
+      }
+      .footerLinks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 14px;
+        margin-top: 8px;
+      }
+      .footerLinks a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+
+      .dropZone {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        border: 2px dashed rgba(199,255,94,.4);
+        border-radius: 22px;
+        padding: 28px 20px;
+        cursor: pointer;
+        transition: border-color .15s, background .15s;
+        text-align: center;
+        color: var(--muted);
+        background: rgba(0,0,0,.12);
+        position: relative;
+      }
+      .dropZone:hover, .dropZone.drag-over {
+        border-color: var(--accent);
+        background: rgba(199,255,94,.06);
+        color: var(--text);
+      }
+      .dropZone input[type="file"] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+      }
+      .dropZone .drop-icon { font-size: 32px; line-height: 1; }
+      .dropZone .drop-label { font-size: 14px; }
+      .uploadPreview {
+        width: 100%;
+        max-height: 160px;
+        object-fit: contain;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        display: none;
+        margin-top: 10px;
+      }
+      .orDivider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 13px;
+        margin: 20px 0 16px;
+      }
+      .orDivider::before, .orDivider::after {
+        content: '';
+        flex: 1;
+        border-top: 1px solid var(--line);
+      }
+        header { align-items: flex-start; flex-direction: column; }
+        .grid { grid-template-columns: 1fr; }
+        .avatarBox { min-height: auto; padding: 16px; }
+        .row, .row3 { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div>
+          <h1>AI Mood</h1>
+          <p class="tag">An emotional avatar app powered by Pollinations.ai: it generates one base image, then edits that same image with the detected facial expression. It supports Bring Your Own Pollen so each user can spend their own balance.</p>
+        </div>
+        <div class="pill"><span>⚡</span><span id="status">Ready</span></div>
+      </header>
+
+      <main class="grid">
+        <section class="card">
+          <div class="avatarBox">
+            <div class="mood"><span id="moodEmoji">🙂</span><strong id="moodLabel">Neutral</strong></div>
+            <div id="placeholder" class="placeholder">Connect Pollinations or use the server-side fallback key first.<br/>Then create the base avatar.</div>
+            <img id="avatar" alt="AI Mood avatar" style="display:none" />
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="pad">
+            <h2>0. Pollinations / BYOP</h2>
+            <p class="small" id="authHelp">Loading configuration...</p>
+            <div class="row3">
+              <button id="connectBtn">Connect Pollinations</button>
+              <button class="secondary" id="keyInfoBtn">View key</button>
+              <button class="danger" id="disconnectBtn">Disconnect</button>
+            </div>
+            <div id="authState" class="small"></div>
+            <div id="keyInfo" class="small"></div>
+            <hr />
+
+            <h2>1. Create base avatar</h2>
+            <label for="persona">Persona</label>
+            <textarea id="persona">a friendly gender-neutral AI companion, young adult, expressive face, short dark hair, warm eyes, minimal black hoodie</textarea>
+            <label for="style">Style</label>
+            <textarea id="style">cinematic 3D portrait, soft studio lighting, clean pastel background, polished app avatar, high quality</textarea>
+            <div class="row">
+              <button id="startBtn">Generate base image</button>
+              <button class="secondary" id="accountBtn">View account</button>
+            </div>
+            <p class="small">When BYOP is connected, FastAPI uses the user's temporary key. Otherwise, it uses <code>POLLINATIONS_API_KEY</code> as a development fallback.</p>
+            <div id="account" class="small"></div>
+
+            <div class="orDivider">— or upload your own —</div>
+
+            <div class="dropZone" id="dropZone">
+              <input type="file" id="uploadFile" accept="image/png,image/jpeg,image/webp" />
+              <span class="drop-icon">🖼️</span>
+              <span class="drop-label">Drag & drop an image here, or click to choose<br/><span style="font-size:12px">PNG · JPEG · WebP · max 10 MB</span></span>
+            </div>
+            <img id="uploadPreview" class="uploadPreview" alt="Upload preview" />
+            <div style="margin-top:10px;">
+              <label for="uploadPersona">Describe the uploaded character <span class="small" style="display:inline">(helps with expression edits)</span></label>
+              <textarea id="uploadPersona" style="min-height:60px" placeholder="e.g. young woman with curly red hair, friendly face, casual outfit"></textarea>
+            </div>
+            <div style="margin-top:10px;">
+              <button id="uploadBtn" disabled>Upload as base image</button>
+            </div>
+            <div id="uploadError" class="error" style="margin-top:8px;"></div>
+            <hr />
+
+            <h2>2. Chat / change mood</h2>
+            <label for="message">User message</label>
+            <textarea id="message" placeholder="Example: I am nervous. I have a demo tomorrow and I am not sure it will go well..."></textarea>
+            <label for="forceMood">Optional forced mood</label>
+            <select id="forceMood">
+              <option value="">Auto-detect</option>
+              <option value="happy">😊 Happy</option>
+              <option value="sad">😔 Sad</option>
+              <option value="angry">😠 Angry</option>
+              <option value="anxious">😟 Anxious</option>
+              <option value="surprised">😮 Surprised</option>
+              <option value="calm">😌 Calm</option>
+              <option value="confused">🤔 Confused</option>
+              <option value="tired">🥱 Tired</option>
+              <option value="excited">🤩 Excited</option>
+              <option value="neutral">🙂 Neutral</option>
+            </select>
+            <div class="row">
+              <button id="sendBtn" disabled>Edit expression</button>
+              <button class="secondary" id="clearBtn">Clear log</button>
+            </div>
+            <div id="error" class="error"></div>
+            <div id="log" class="log"></div>
+          </div>
+        </section>
+      </main>
+
+      <section class="brandBlock" aria-label="Pollinations attribution">
+        <div class="brandCopy">
+          <a class="polliBadge" href="https://pollinations.ai" target="_blank" rel="noreferrer noopener">🐝 Built With pollinations.ai</a>
+          <div class="footerLinks small">
+            <a href="https://pollinations.ai" target="_blank" rel="noreferrer noopener">pollinations.ai</a>
+            <a href="https://enter.pollinations.ai" target="_blank" rel="noreferrer noopener">Get a Pollinations API key</a>
+            <a href="https://github.com/pollinations/pollinations" target="_blank" rel="noreferrer noopener">Open-source project</a>
+          </div>
+        </div>
+        <a href="https://pollinations.ai" target="_blank" rel="noreferrer noopener" title="pollinations.ai">
+          <img class="pollinationsLogo" src="https://raw.githubusercontent.com/pollinations/pollinations/main/assets/logo-text-white.svg" alt="pollinations.ai Logo Text White" />
+        </a>
+      </section>
+    </div>
+
+    <script>
+      let sessionId = null;
+      let config = null;
+      const KEY_STORAGE = 'ai_mood_byop_api_key';
+      const STATE_STORAGE = 'ai_mood_byop_state';
+      const $ = (id) => document.getElementById(id);
+
+      function setBusy(isBusy, text = 'Working...') {
+        $('status').textContent = isBusy ? text : 'Ready';
+        $('startBtn').disabled = isBusy || !canGenerate();
+        $('sendBtn').disabled = isBusy || !sessionId || !canGenerate();
+        $('connectBtn').disabled = isBusy || !config?.byop_enabled;
+        $('uploadBtn').disabled = isBusy || !$('uploadFile').files?.length;
+      }
+
+      function canGenerate() {
+        return Boolean(getUserKey() || config?.server_key_available);
+      }
+
+      function getUserKey() {
+        return localStorage.getItem(KEY_STORAGE) || '';
+      }
+
+      function maskKey(key) {
+        if (!key) return 'none';
+        return key.slice(0, 6) + '…' + key.slice(-4);
+      }
+
+      function showError(err) {
+        $('error').textContent = err ? String(err) : '';
+      }
+
+      function setAvatar(url) {
+        $('placeholder').style.display = 'none';
+        $('avatar').style.display = 'block';
+        $('avatar').src = url;
+      }
+
+      function addLog(text, meta) {
+        const el = document.createElement('div');
+        el.className = 'msg';
+        el.innerHTML = `<div>${escapeHtml(text)}</div><div class="small">${escapeHtml(meta)}</div>`;
+        $('log').prepend(el);
+      }
+
+      function escapeHtml(str) {
+        return String(str).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+      }
+
+      async function api(path, body) {
+        const headers = { 'Content-Type': 'application/json' };
+        const userKey = getUserKey();
+        if (userKey) headers.Authorization = `Bearer ${userKey}`;
+        const res = await fetch(path, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+        return data;
+      }
+
+      async function apiGet(path) {
+        const headers = {};
+        const userKey = getUserKey();
+        if (userKey) headers.Authorization = `Bearer ${userKey}`;
+        const res = await fetch(path, { headers });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+        return data;
+      }
+
+      async function loadConfig() {
+        const res = await fetch('/api/config');
+        config = await res.json();
+        renderAuthState();
+      }
+
+      function handleAuthCallback() {
+        if (!location.hash) return;
+        const params = new URLSearchParams(location.hash.slice(1));
+        const error = params.get('error');
+        const apiKey = params.get('api_key');
+        const returnedState = params.get('state');
+        const expectedState = localStorage.getItem(STATE_STORAGE);
+
+        if (error) {
+          showError(`Pollinations authorization failed: ${error}`);
+        } else if (apiKey) {
+          if (expectedState && returnedState && expectedState !== returnedState) {
+            showError('Security check failed: returned BYOP state does not match. Try connecting again.');
+          } else {
+            localStorage.setItem(KEY_STORAGE, apiKey);
+            localStorage.removeItem(STATE_STORAGE);
+            addLog('Pollinations connected.', `BYOP key: ${maskKey(apiKey)}`);
+          }
+        }
+        history.replaceState(null, '', location.pathname + location.search);
+      }
+
+      function renderAuthState() {
+        const userKey = getUserKey();
+        const parts = [];
+        if (config?.byop_enabled) {
+          parts.push(`BYOP App Key enabled: ${maskKey(config.client_id)}`);
+          parts.push(`models: ${config.models.join(', ')}`);
+          parts.push(`budget: ${config.budget || 'default'} pollen`);
+          parts.push(`expiry: ${config.expiry_days || 'default'} days`);
+        } else {
+          parts.push('BYOP is not configured: missing POLLINATIONS_APP_KEY=pk_...');
+        }
+        parts.push(config?.server_key_available ? 'server fallback: available' : 'server fallback: none');
+        $('authHelp').textContent = parts.join(' · ');
+
+        if (userKey) {
+          $('authState').innerHTML = `<span class="ok">BYOP connected.</span> The user key will be used: <code>${maskKey(userKey)}</code>`;
+        } else if (config?.server_key_available) {
+          $('authState').innerHTML = `BYOP is not connected. The server-side key will be used as a development fallback.`;
+        } else {
+          $('authState').innerHTML = `Connect Pollinations to generate images.`;
+        }
+        setBusy(false);
+      }
+
+      function connectPollinations() {
+        if (!config?.byop_enabled || !config.client_id) {
+          showError('Missing POLLINATIONS_APP_KEY=pk_... on the server. Create an App Key at enter.pollinations.ai and add it to your .env file.');
+          return;
+        }
+        const state = crypto.getRandomValues(new Uint32Array(4)).join('-');
+        localStorage.setItem(STATE_STORAGE, state);
+        const redirectUri = new URL(config.redirect_path || '/auth/callback', location.origin).href;
+        const params = new URLSearchParams({
+          redirect_uri: redirectUri,
+          client_id: config.client_id,
+          state,
+        });
+        if (config.scope) params.set('scope', config.scope);
+        if (config.models?.length) params.set('models', config.models.join(','));
+        if (config.budget) params.set('budget', config.budget);
+        if (config.expiry_days) params.set('expiry', config.expiry_days);
+        location.href = `${config.auth_base_url}/authorize?${params.toString()}`;
+      }
+
+      $('connectBtn').addEventListener('click', connectPollinations);
+
+      $('disconnectBtn').addEventListener('click', () => {
+        localStorage.removeItem(KEY_STORAGE);
+        localStorage.removeItem(STATE_STORAGE);
+        $('keyInfo').textContent = '';
+        renderAuthState();
+      });
+
+      $('keyInfoBtn').addEventListener('click', async () => {
+        $('keyInfo').textContent = 'Checking key...';
+        try {
+          const data = await apiGet('/api/key-info');
+          $('keyInfo').innerHTML = `<pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+        } catch (err) {
+          $('keyInfo').textContent = err.message;
+        }
+      });
+
+      $('startBtn').addEventListener('click', async () => {
+        showError('');
+        setBusy(true, 'Generating base avatar...');
+        try {
+          const data = await api('/api/start', {
+            persona: $('persona').value,
+            style: $('style').value
+          });
+          sessionId = data.session_id;
+          setAvatar(data.image_url);
+          addLog('Base avatar created.', `session: ${sessionId} · reference mode: ${data.reference_mode} · auth: ${data.auth_mode}`);
+        } catch (err) {
+          showError(err.message);
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      $('sendBtn').addEventListener('click', async () => {
+        const text = $('message').value.trim();
+        if (!text) return;
+        showError('');
+        setBusy(true, 'Editing expression...');
+        try {
+          const data = await api('/api/message', {
+            session_id: sessionId,
+            text,
+            force_mood: $('forceMood').value || null
+          });
+          $('moodEmoji').textContent = data.emoji;
+          $('moodLabel').textContent = data.mood_label;
+          setAvatar(data.image_url);
+          addLog(text, `${data.emoji} ${data.mood_label} · edited from: ${data.edited_from} · auth: ${data.auth_mode}`);
+          $('message').value = '';
+        } catch (err) {
+          showError(err.message);
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      $('clearBtn').addEventListener('click', () => { $('log').innerHTML = ''; showError(''); });
+
+      // ── Upload ────────────────────────────────────────────────────────────
+      function handleFileSelected(file) {
+        if (!file) return;
+        $('uploadBtn').disabled = false;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const preview = $('uploadPreview');
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+
+      $('uploadFile').addEventListener('change', () => {
+        handleFileSelected($('uploadFile').files[0]);
+      });
+
+      const dropZone = $('dropZone');
+      dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
+        // Transfer to the real input so uploadBtn logic works
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        $('uploadFile').files = dt.files;
+        handleFileSelected(file);
+      });
+
+      $('uploadBtn').addEventListener('click', async () => {
+        const file = $('uploadFile').files[0];
+        if (!file) return;
+        $('uploadError').textContent = '';
+        setBusy(true, 'Uploading image...');
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('persona', $('uploadPersona').value.trim() || 'uploaded avatar, expressive face');
+          formData.append('style', $('style').value.trim() || 'portrait, cinematic lighting, high quality');
+
+          const headers = {};
+          const userKey = getUserKey();
+          if (userKey) headers.Authorization = `Bearer ${userKey}`;
+
+          const res = await fetch('/api/upload', { method: 'POST', headers, body: formData });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+
+          sessionId = data.session_id;
+          setAvatar(data.image_url);
+          addLog('Base image uploaded.', `session: ${data.session_id} · reference mode: ${data.reference_mode} · auth: ${data.auth_mode}`);
+          $('uploadPreview').style.display = 'none';
+        } catch (err) {
+          $('uploadError').textContent = err.message;
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      $('accountBtn').addEventListener('click', async () => {
+        $('account').textContent = 'Checking account...';
+        try {
+          const data = await apiGet('/api/account');
+          $('account').innerHTML = `<pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+        } catch (err) {
+          $('account').textContent = err.message + ' — try “View key”, which requires fewer permissions.';
+        }
+      });
+
+      (async function init() {
+        handleAuthCallback();
+        await loadConfig();
+        renderAuthState();
+      })().catch(err => showError(err.message));
+    </script>
+  </body>
+</html>
