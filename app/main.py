@@ -298,7 +298,9 @@ async def message(req: MessageRequest, authorization: str | None = Header(defaul
         client, auth_mode = make_client(authorization)
         try:
             image_bytes = await client.edit_avatar(source_path, edit_prompt)
-        except PollinationsError:
+        except PollinationsError as edit_err:
+            import logging
+            logging.getLogger("ai-mood").warning("Image edit failed, using fallback generation: %s", edit_err)
             fallback_prompt = build_fallback_generation_prompt(session["identity_prompt"], expression_description)
             image_bytes = await client.fallback_variation(fallback_prompt)
             edited_from = "fallback_generation"

@@ -124,13 +124,15 @@ class PollinationsClient:
 
         valid_moods = ", ".join(MOODS.keys())
         system_msg = (
-            "You are an emotion-to-expression translator. "
-            "Given a user message, you must respond with a JSON object with exactly two fields:\n"
+            "You analyze emotions in any language and translate them into facial expression descriptions. "
+            "Given a user message (which may be in Spanish, English, or any language), respond with a JSON object with exactly two fields:\n"
             f'- "mood": one of [{valid_moods}]\n'
-            '- "expression": a vivid 15-25 word description of the facial expression this person would show, '
+            '- "expression": a vivid 15-25 word English description of the facial expression this person would show, '
             "focusing on eyes, eyebrows, mouth, and micro-expressions.\n\n"
-            'Example input: "I just got promoted!"\n'
-            'Example output: {"mood": "excited", "expression": "wide beaming smile, eyes sparkling with joy, eyebrows raised high, cheeks pushed up, radiant thrilled face"}\n\n'
+            'Example: "I just got promoted!" → {"mood": "excited", "expression": "wide beaming smile, eyes sparkling with joy, eyebrows raised high, cheeks pushed up, radiant thrilled face"}\n'
+            'Example: "Estoy super enfadado!" → {"mood": "angry", "expression": "furrowed eyebrows, intense glaring eyes, tight pressed lips, flared nostrils, jaw clenched in controlled rage"}\n'
+            'Example: "Tengo mucho miedo" → {"mood": "anxious", "expression": "wide fearful eyes, raised inner eyebrows, tense slightly open mouth, pale face, trembling uneasy expression"}\n'
+            'Example: "What a beautiful day, I feel so peaceful" → {"mood": "calm", "expression": "soft gentle smile, relaxed closed eyes, smooth forehead, serene peaceful face, calm breathing"}\n\n'
             "Respond with ONLY the JSON object, no other text."
         )
         payload = {

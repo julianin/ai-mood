@@ -100,15 +100,15 @@ MOODS: dict[MoodName, Mood] = {
 }
 
 _KEYWORDS: list[tuple[MoodName, tuple[str, ...]]] = [
-    ("angry", ("hate", "fed up", "angry", "furious", "rage", "annoyed", "irritated", "pissed", "mad", "wtf", "screw this")),
-    ("sad", ("sad", "bad", "cry", "depressed", "lonely", "empty", "grief", "discouraged", "hurt", "heartbroken", "down")),
-    ("anxious", ("anxious", "anxiety", "nervous", "scared", "worried", "stressed", "overwhelmed", "panic", "i can't", "urgent", "afraid")),
-    ("surprised", ("wow", "no way", "i can't believe", "surprise", "amazing", "unexpected", "shocked", "what do you mean")),
-    ("excited", ("let's go", "awesome", "amazing", "i love", "hyped", "motivated", "excited", "can't wait", "so cool", "great")),
-    ("happy", ("happy", "glad", "good", "thanks", "perfect", "lol", "haha", "smile", "joy", "cheerful")),
-    ("confused", ("i don't understand", "confused", "question", "how", "what does", "explain", "lost", "unclear", "not sure")),
-    ("tired", ("tired", "exhausted", "sleepy", "sleep", "fatigue", "burned out", "burnout", "drained")),
-    ("calm", ("calm", "peaceful", "relaxed", "peace", "breathe", "serene", "steady")),
+    ("angry", ("hate", "fed up", "angry", "furious", "rage", "annoyed", "irritated", "pissed", "mad", "wtf", "screw this", "enfadado", "enfadada", "furioso", "furiosa", "cabreado", "cabreada", "me cabrea", "me enfada", "odio", "me odio")),
+    ("sad", ("sad", "bad", "cry", "depressed", "lonely", "empty", "grief", "discouraged", "hurt", "heartbroken", "down", "triste", "deprimido", "deprimida", "solo", "sola", "llorar", "lloro", "dolido", "corazón roto")),
+    ("anxious", ("anxious", "anxiety", "nervous", "scared", "worried", "stressed", "overwhelmed", "panic", "i can't", "urgent", "afraid", "nervioso", "nerviosa", "asustado", "asustada", "preocupado", "preocupada", "estresado", "miedo", "pánico")),
+    ("surprised", ("wow", "no way", "i can't believe", "surprise", "amazing", "unexpected", "shocked", "what do you mean", "sorpresa", "increíble", "no me lo creo", "alucino", "flipando")),
+    ("excited", ("let's go", "awesome", "amazing", "i love", "hyped", "motivated", "excited", "can't wait", "so cool", "great", "emocionado", "emocionada", "ilusionado", "ilusionada", "vamos", "genial", "increíble")),
+    ("happy", ("happy", "glad", "good", "thanks", "perfect", "lol", "haha", "smile", "joy", "cheerful", "feliz", "contento", "contenta", "alegre", "gracias", "genial", "bien")),
+    ("confused", ("i don't understand", "confused", "question", "how", "what does", "explain", "lost", "unclear", "not sure", "confundido", "confundida", "no entiendo", "no comprendo", "perdido", "perdida")),
+    ("tired", ("tired", "exhausted", "sleepy", "sleep", "fatigue", "burned out", "burnout", "drained", "cansado", "cansada", "agotado", "agotada", "sueño", "fatiga", "quemado")),
+    ("calm", ("calm", "peaceful", "relaxed", "peace", "breathe", "serene", "steady", "tranquilo", "tranquila", "pacífico", "relajado", "relajada", "sereno")),
 ]
 
 
